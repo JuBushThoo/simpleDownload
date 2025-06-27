@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure File Drop | DDserver</title>
+    <style>
+        :root {
+            --primary-color: #FF6B35;
+            --primary-hover: #E55627;
+            --secondary-color: #1E1E1E;
+            --text-color: #E0E0E0;
+            --text-secondary: #A0A0A0;
+            --border-color: #3A3A3A;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+            --success-color: #4CAF50;
+            --glass-bg: rgba(30, 30, 30, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #2C2C2C 0%, #1A1A1A 100%);
+            color: var(--text-color);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background-attachment: fixed;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: var(--glass-bg);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px var(--shadow-color);
+            padding: 30px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            text-align: center;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 24px;
+            font-weight: 600;
+            font-size: 28px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .logo {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 20px;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 48px;
+            font-weight: bold;
+            user-select: none;
+            box-shadow: 0 4px 20px rgba(255, 107, 53, 0.3);
+        }
+
+        .drop-area {
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 40px 20px;
+            margin-bottom: 24px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            background: rgba(40, 40, 40, 0.3);
+        }
+
+        .drop-area:hover {
+            border-color: var(--primary-color);
+            background: rgba(255, 107, 53, 0.05);
+        }
+
+        .drop-area.active {
+            border-color: var(--primary-color);
+            background: rgba(255, 107, 53, 0.1);
+            box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.1);
+        }
+
+        .drop-area i {
+            font-size: 48px;
+            color: var(--primary-color);
+            margin-bottom: 16px;
+        }
+
+        .drop-area p {
+            margin-bottom: 8px;
+        }
+
+        .drop-area p:first-of-type {
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+
+        .drop-area p:last-of-type {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .drop-area .file-input {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 14px 28px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn i {
+            margin-right: 8px;
+        }
+
+        .file-info {
+            margin-top: 16px;
+            padding: 12px 16px;
+            background: rgba(50, 50, 50, 0.5);
+            border-radius: 8px;
+            display: none;
+            border-left: 3px solid var(--primary-color);
+            text-align: left;
+            font-size: 14px;
+        }
+
+        .file-info.show {
+            display: block;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background-color: rgba(60, 60, 60, 0.5);
+            border-radius: 4px;
+            margin-top: 16px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .progress-bar.show {
+            display: block;
+        }
+
+        .progress {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-color) 0%, var(--primary-hover) 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 4px;
+        }
+
+        .success-message {
+            color: var(--success-color);
+            margin-top: 16px;
+            font-weight: 500;
+            display: none;
+            padding: 10px;
+            background: rgba(76, 175, 80, 0.1);
+            border-radius: 8px;
+            border-left: 3px solid var(--success-color);
+        }
+
+        .success-message.show {
+            display: block;
+        }
+
+        footer {
+            margin-top: 40px;
+            color: var(--text-secondary);
+            font-size: 14px;
+            text-align: center;
+        }
+
+        /* Animated background elements */
+        .bg-elements {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .bg-element {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            opacity: 0.15;
+        }
+
+        .bg-element-1 {
+            width: 300px;
+            height: 300px;
+            background: var(--primary-color);
+            top: -100px;
+            left: -100px;
+            animation: float 15s infinite ease-in-out;
+        }
+
+        .bg-element-2 {
+            width: 400px;
+            height: 400px;
+            background: #4A00E0;
+            bottom: -150px;
+            right: -100px;
+            animation: float 18s infinite ease-in-out reverse;
+        }
+
+        .bg-element-3 {
+            width: 200px;
+            height: 200px;
+            background: #00C6FB;
+            top: 50%;
+            left: 30%;
+            animation: float 12s infinite ease-in-out;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translate(0, 0);
+            }
+
+            50% {
+                transform: translate(20px, 20px);
+            }
+        }
+
+        /* Font Awesome icons (can be replaced with actual FA link if needed) */
+        .icon {
+            display: inline-block;
+            width: 1em;
+            height: 1em;
+            stroke-width: 0;
+            stroke: currentColor;
+            fill: currentColor;
+        }
+
+        .url-download-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .url-input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        #fileUrl {
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+
+        #fileUrl:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.2);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-elements">
+        <div class="bg-element bg-element-1"></div>
+        <div class="bg-element bg-element-2"></div>
+        <div class="bg-element bg-element-3"></div>
+    </div>
+
+    <div class="container">
+        <div class="logo">DD</div>
+        <h1>Secure File Transfer</h1>
+
+        <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data">
+            <div class="drop-area" id="dropArea">
+                <svg class="icon" viewBox="0 0 24 24" width="48" height="48">
+                    <path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
+                </svg>
+                <p><strong>Drag & drop your file here</strong></p>
+                <p>Supports all file types</p>
+                <input type="file" name="file" id="fileInput" class="file-input" required>
+            </div>
+
+            <div class="file-info" id="fileInfo">
+                Selected file: <span id="fileName"></span> (<span id="fileSize"></span>)
+            </div>
+
+            <br>
+
+            <div class="progress-bar" id="progressBar">
+                <div class="progress" id="progress"></div>
+
+            </div>
+
+            <br>
+
+            <button type="submit" class="btn" id="submitBtn">
+                <svg class="icon" viewBox="0 0 24 24" width="16" height="16">
+                    <path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" />
+                </svg>
+                Upload File
+            </button>
+
+            <div class="success-message" id="successMessage">
+                <svg class="icon" viewBox="0 0 24 24" width="16" height="16" style="margin-right: 8px;">
+                    <path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z" />
+                </svg>
+                File uploaded successfully!
+            </div>
+        </form>
+    </div>
+
+    <div class="url-download-section">
+        <h2 style="color: var(--primary-color); margin: 20px 0 15px;">Or download from URL</h2>
+        <div class="url-input-group">
+            <input type="url" id="fileUrl" placeholder="https://example.com/file.pdf" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); 
+                          background: rgba(50, 50, 50, 0.5); color: var(--text-color);">
+            <button id="downloadUrlBtn" class="btn" style="margin-top: 10px;">
+                <svg class="icon" viewBox="0 0 24 24" width="16" height="16">
+                    <path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" />
+                </svg>
+                Download File
+            </button>
+        </div>
+    </div>
+
+    <footer>
+        &copy; 2025 DDserver | Secure file transfer
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const dropArea = document.getElementById('dropArea');
+            const fileInput = document.getElementById('fileInput');
+            const fileInfo = document.getElementById('fileInfo');
+            const fileName = document.getElementById('fileName');
+            const fileSize = document.getElementById('fileSize');
+            const progressBar = document.getElementById('progressBar');
+            const progress = document.getElementById('progress');
+            const submitBtn = document.getElementById('submitBtn');
+            const successMessage = document.getElementById('successMessage');
+            const uploadForm = document.getElementById('uploadForm');
+
+            const downloadUrlBtn = document.getElementById('downloadUrlBtn');
+            const fileUrlInput = document.getElementById('fileUrl');
+
+            // Prevent default drag behaviors
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, preventDefaults, false);
+                document.body.addEventListener(eventName, preventDefaults, false);
+            });
+
+            // Highlight drop area when item is dragged over it
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropArea.addEventListener(eventName, highlight, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, unhighlight, false);
+            });
+
+            // Handle dropped files
+            dropArea.addEventListener('drop', handleDrop, false);
+
+            // Handle selected files
+            fileInput.addEventListener('change', handleFiles, false);
+
+            // Form submission
+            uploadForm.addEventListener('submit', handleSubmit, false);
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            function highlight() {
+                dropArea.classList.add('active');
+            }
+
+            function unhighlight() {
+                dropArea.classList.remove('active');
+            }
+
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                fileInput.files = files;
+                handleFiles();
+            }
+
+            function handleFiles() {
+                const files = fileInput.files;
+                if (files.length > 0) {
+                    const file = files[0];
+                    fileName.textContent = file.name;
+                    fileSize.textContent = formatFileSize(file.size);
+                    fileInfo.classList.add('show');
+                    submitBtn.disabled = false;
+                }
+            }
+
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+
+            function handleSubmit(e) {
+                e.preventDefault();
+
+                // Проверка, что файл выбран
+                if (!fileInput.files || fileInput.files.length === 0) {
+                    alert('Пожалуйста, выберите файл для загрузки');
+                    return;
+                }
+
+                const formData = new FormData(uploadForm);
+                const xhr = new XMLHttpRequest();
+
+                progressBar.classList.add('show');
+                submitBtn.disabled = true;
+                successMessage.classList.remove('show');
+
+                xhr.upload.addEventListener('progress', function (e) {
+                    if (e.lengthComputable) {
+                        const percentComplete = (e.loaded / e.total) * 100;
+                        progress.style.width = percentComplete + '%';
+                    }
+                }, false);
+
+                xhr.addEventListener('load', function () {
+                    if (xhr.status === 200) {
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            if (response.status === "success") {
+                                successMessage.textContent = response.message;
+                                successMessage.classList.add('show');
+
+                                setTimeout(() => {
+                                    successMessage.classList.remove('show');
+                                    fileInfo.classList.remove('show');
+                                    progressBar.classList.remove('show');
+                                    progress.style.width = '0%';
+                                    uploadForm.reset();
+                                    submitBtn.disabled = false;
+                                }, 3000);
+                                return;
+                            }
+                        } catch (e) {
+                            console.error("Ошибка при разборе ответа:", e);
+                        }
+                        successMessage.textContent = xhr.responseText;
+                        successMessage.classList.add('show');
+                    } else {
+                        alert('Ошибка загрузки файла. Статус: ' + xhr.status);
+                    }
+                    submitBtn.disabled = false;
+                    progressBar.classList.remove('show');
+                }, false);
+
+                xhr.addEventListener('error', function () {
+                    alert('Ошибка сети при загрузке файла');
+                    submitBtn.disabled = false;
+                    progressBar.classList.remove('show');
+                });
+
+                xhr.open('POST', uploadForm.action, true);
+                xhr.send(formData);
+            }
+
+            downloadUrlBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+
+                const url = fileUrlInput.value.trim();
+                if (!url) {
+                    alert('Пожалуйста, введите URL файла');
+                    return;
+                }
+
+                // Проверка валидности URL
+                try {
+                    new URL(url);
+                } catch (e) {
+                    alert('Пожалуйста, введите корректный URL (начинается с http:// или https://)');
+                    return;
+                }
+
+                downloadUrlBtn.disabled = true;
+                downloadUrlBtn.innerHTML = '<svg class="icon" viewBox="0 0 24 24" width="16" height="16"><path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z" /></svg> Downloading...';
+
+                // Отправляем запрос на сервер для прокси-скачивания
+                fetch(`/download?url=${encodeURIComponent(url)}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Ошибка скачивания файла');
+                        }
+                        return response.blob();
+                    })
+                    .then(blob => {
+                        // Создаем ссылку для скачивания
+                        const downloadUrl = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = downloadUrl;
+                        a.download = url.substring(url.lastIndexOf('/') + 1) || 'downloaded_file';
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(downloadUrl);
+                        a.remove();
+
+                        successMessage.textContent = 'Файл успешно скачан!';
+                        successMessage.classList.add('show');
+                        setTimeout(() => successMessage.classList.remove('show'), 3000);
+                    })
+                    .catch(error => {
+                        console.error('Ошибка:', error);
+                        alert(error.message);
+                    })
+                    .finally(() => {
+                        downloadUrlBtn.disabled = false;
+                        downloadUrlBtn.innerHTML = '<svg class="icon" viewBox="0 0 24 24" width="16" height="16"><path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" /></svg> Download File';
+                    });
+            });
+        });
+    </script>
+</body>
+
+</html>
